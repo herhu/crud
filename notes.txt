@@ -1,0 +1,1 @@
+docker run --name secret-notes-db -e POSTGRES_USER=spherity -e POSTGRES_PASSWORD=Swoeie-Aezea-Eeiaj-Uoaeu -e POSTGRES_DB=secretnotes -p 5432:5432 -d postgres
