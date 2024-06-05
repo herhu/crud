@@ -1,19 +1,22 @@
+// src/secret-note/secret-note.service.ts
+
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { SecretNote } from './secret-note.entity';
-import * as bcrypt from 'bcryptjs';
+import { EccService } from '../ecc/ecc.service';
 
 @Injectable()
 export class SecretNoteService {
   constructor(
     @InjectRepository(SecretNote)
     private secretNoteRepository: Repository<SecretNote>,
+    private readonly eccService: EccService,
   ) {}
 
   async create(note: string): Promise<SecretNote> {
-    const encryptedNote = await bcrypt.hash(note, 10);
-    const newNote = this.secretNoteRepository.create({ note: encryptedNote });
+    const encryptedData = this.eccService.encrypt(note);
+    const newNote = this.secretNoteRepository.create({ note: encryptedData, ephemeralPublicKey: this.eccService.predefinedPublicKey });
     return this.secretNoteRepository.save(newNote);
   }
 
@@ -27,7 +30,8 @@ export class SecretNoteService {
     if (!note) {
       throw new NotFoundException('Note not found');
     }
-    return await bcrypt.compare(note.note, note.note) ? note.note : '';
+
+    return this.eccService.decrypt(note.note);
   }
 
   async findOneEncrypted(id: number): Promise<SecretNote> {
@@ -39,8 +43,8 @@ export class SecretNoteService {
   }
 
   async update(id: number, newNote: string): Promise<SecretNote> {
-    const encryptedNote = await bcrypt.hash(newNote, 10);
-    const note = await this.secretNoteRepository.preload({ id, note: encryptedNote });
+    const encryptedData = this.eccService.encrypt(newNote);
+    const note = await this.secretNoteRepository.preload({ id, note: encryptedData, ephemeralPublicKey: this.eccService.predefinedPublicKey });
     if (!note) {
       throw new NotFoundException('Note not found');
     }

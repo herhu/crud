@@ -19,10 +19,10 @@ services:
       DB_PASSWORD: Swoeie-Aezea-Eeiaj-Uoaeu
       DB_NAME: secretnotes
     depends_on:
-      - db
+      - db 
     ports:
       - 3000:3000
-  db:
+  db: 
     container_name: secret-notes-db
     image: postgres
     environment:

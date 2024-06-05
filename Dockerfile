@@ -27,7 +27,7 @@ FROM base as deps
 RUN --mount=type=bind,source=package.json,target=package.json \
     --mount=type=bind,source=package-lock.json,target=package-lock.json \
     --mount=type=cache,target=/root/.npm \
-    npm ci --omit=dev
+    npm ci 
 
 ################################################################################
 # Create a stage for building the application.
@@ -44,6 +44,9 @@ RUN --mount=type=bind,source=package.json,target=package.json \
 COPY . .
 # Run the build script.
 RUN npm run build
+
+# Verificación del contenido del directorio después del build
+RUN ls /usr/src/app
 
 ################################################################################
 # Create a new stage to run the application with minimal runtime dependencies
@@ -62,11 +65,11 @@ COPY package.json .
 # Copy the production dependencies from the deps stage and also
 # the built application from the build stage into the image.
 COPY --from=deps /usr/src/app/node_modules ./node_modules
-COPY --from=build /usr/src/app/challenger ./challenger
+COPY --from=build /usr/src/app ./secret-notes
 
 
 # Expose the port that the application listens on.
 EXPOSE 3000
 
 # Run the application.
-CMD npm start
+CMD npm run start:prod

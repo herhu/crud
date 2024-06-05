@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { SecretNoteService } from './secret-note.service';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { SecretNote } from './secret-note.entity';
+import { EccService } from '../ecc/ecc.service';
 import * as bcrypt from 'bcryptjs';
 
 const mockRepository = {
@@ -20,6 +21,7 @@ describe('SecretNoteService', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         SecretNoteService,
+        EccService,
         {
           provide: getRepositoryToken(SecretNote),
           useValue: mockRepository,

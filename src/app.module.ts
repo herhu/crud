@@ -3,6 +3,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule } from '@nestjs/config';
 import { SecretNoteModule } from './secret-note/secret-note.module';
 import { SecretNote } from './secret-note/secret-note.entity';
+import { EccService } from './ecc/ecc.service';
 
 @Module({
   imports: [
@@ -19,5 +20,6 @@ import { SecretNote } from './secret-note/secret-note.entity';
     }),
     SecretNoteModule,
   ],
-})
+  providers: [EccService],
+}) 
 export class AppModule {}

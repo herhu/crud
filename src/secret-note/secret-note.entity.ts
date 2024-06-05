@@ -8,6 +8,9 @@ export class SecretNote {
   @Column()
   note: string;
 
+  @Column({ default: '' })
+  ephemeralPublicKey: string;
+
   @CreateDateColumn()
   createdAt: Date;
 
