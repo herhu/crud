@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { SecretNoteController } from './secret-note.controller';
 import { SecretNoteService } from './secret-note.service';
-import { CreateSecretNoteDto, UpdateSecretNoteDto } from './dto';
+import { CreateSecretNoteDto, UpdateSecretNoteDto, IdDto } from './dto';
 import { SecretNote } from './secret-note.entity';
 
 describe('SecretNoteController', () => {
@@ -45,23 +45,37 @@ describe('SecretNoteController', () => {
   });
 
   it('should return a single secret note content', async () => {
-    expect(await controller.findOne(1)).toBe('Decrypted note content');
+    const id: IdDto = { id: 1 };
+    expect(await controller.findOne(id)).toBe('Decrypted note content');
     expect(service.findOne).toHaveBeenCalledWith({ id: 1 });
   });
 
   it('should return a single encrypted secret note', async () => {
-    expect(await controller.findOneEncrypted(1)).toEqual(new SecretNote());
+    const id: IdDto = { id: 1 };
+    expect(await controller.findOneEncrypted(id)).toEqual(new SecretNote());
     expect(service.findOneEncrypted).toHaveBeenCalledWith({ id: 1 });
   });
 
   it('should update a secret note', async () => {
     const dto: UpdateSecretNoteDto = { note: 'Updated note' };
-    expect(await controller.update(1, dto)).toEqual({ id: 1, ...dto });
+    const id = '1';
+    const updatedNote: SecretNote = {
+      id: 1,
+      note: 'Updated note',
+      ephemeralPublicKey: '',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+
+    jest.spyOn(service, 'update').mockResolvedValue(updatedNote);
+
+    expect(await controller.update(id, dto)).toEqual(updatedNote);
     expect(service.update).toHaveBeenCalledWith({ id: 1 }, dto);
   });
 
   it('should remove a secret note', async () => {
-    expect(await controller.remove(1)).toBeUndefined();
+    const id: IdDto = { id: 1 };
+    expect(await controller.remove(id)).toBeUndefined();
     expect(service.remove).toHaveBeenCalledWith({ id: 1 });
   });
 });

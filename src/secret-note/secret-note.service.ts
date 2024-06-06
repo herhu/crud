@@ -1,4 +1,4 @@
-import { Injectable, InternalServerErrorException } from '@nestjs/common';
+import { Injectable, InternalServerErrorException, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { SecretNote } from './secret-note.entity';
@@ -8,6 +8,8 @@ import { SecretNoteNotFoundException, InvalidSecretNoteException } from '../exce
 
 @Injectable()
 export class SecretNoteService {
+  private readonly logger = new Logger(SecretNoteService.name);
+  
   constructor(
     @InjectRepository(SecretNote)
     private secretNoteRepository: Repository<SecretNote>,
@@ -77,23 +79,33 @@ export class SecretNoteService {
       throw new InvalidSecretNoteException();
     }
     try {
-      const encryptedData = this.eccService.encrypt(updateSecretNoteDto.note);
-      const note = await this.secretNoteRepository.preload({
-        id,
-        note: encryptedData,
-        ephemeralPublicKey: this.eccService.predefinedPublicKey,
-      });
-      if (!note) {
+      this.logger.debug(`Updating note with ID: ${id}`);
+
+      const existingNote = await this.secretNoteRepository.findOne({ where: { id } });
+      if (!existingNote) {
+        this.logger.error(`Note with ID: ${id} not found`);
         throw new SecretNoteNotFoundException(id);
       }
-      return await this.secretNoteRepository.save(note);
+
+      const encryptedData = this.eccService.encrypt(updateSecretNoteDto.note);
+      this.logger.debug(`Encrypted data: ${encryptedData}`);
+
+      existingNote.note = encryptedData;
+      existingNote.ephemeralPublicKey = this.eccService.predefinedPublicKey;
+
+      const savedNote = await this.secretNoteRepository.save(existingNote);
+      this.logger.debug(`Note saved: ${JSON.stringify(savedNote)}`);
+      return savedNote;
     } catch (error) {
       if (error instanceof SecretNoteNotFoundException || error instanceof InvalidSecretNoteException) {
         throw error;
       }
+      this.logger.error(`Failed to update note with ID: ${id}`, error.stack);
       throw new InternalServerErrorException('Failed to update note');
     }
   }
+
+  
 
   async remove(idDto: IdDto): Promise<void> {
     const { id } = idDto;

@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { INestApplication } from '@nestjs/common';
+import { INestApplication, ValidationPipe } from '@nestjs/common';
 import * as request from 'supertest';
 import { AppModule } from '../src/app.module';
 import { DataSource } from 'typeorm';
@@ -14,6 +14,7 @@ describe('SecretNoteController (e2e)', () => {
     }).compile();
 
     app = moduleFixture.createNestApplication();
+    app.useGlobalPipes(new ValidationPipe());
     await app.init();
 
     dataSource = app.get(DataSource);
@@ -92,7 +93,7 @@ describe('SecretNoteController (e2e)', () => {
       .send({ note: 'This is an updated test note' })
       .expect(200)
       .then((response) => {
-        expect(response.body.note).toBeDefined();
+        expect(response.body.note).toBe('This is an updated test note');
       });
   });
 
@@ -111,6 +112,25 @@ describe('SecretNoteController (e2e)', () => {
         return request(app.getHttpServer())
           .get(`/secret-notes/${noteId}`)
           .expect(404);
+      });
+  });
+
+  it('should return 400 if note content is empty (POST)', () => {
+    return request(app.getHttpServer())
+      .post('/secret-notes')
+      .send({ note: '' })
+      .expect(400)
+      .then((response) => {
+        expect(response.body.message).toContain('Note content cannot be empty');
+      });
+  });
+
+  it('should return 404 if note is not found (GET)', () => {
+    return request(app.getHttpServer())
+      .get('/secret-notes/9999')
+      .expect(404)
+      .then((response) => {
+        expect(response.body.message).toBe('Secret note with ID 9999 not found');
       });
   });
 });

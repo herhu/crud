@@ -30,6 +30,9 @@ services:
 
   test:
     build: .
+    volumes:
+      - .:/app
+      - /app/node_modules
     command: npm run test
     env_file: 
       - .env

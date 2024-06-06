@@ -18,22 +18,23 @@ export class SecretNoteController {
   }
 
   @Get(':id')
-  findOne(@Param('id') id: number): Promise<string> {
-    return this.secretNoteService.findOne({ id });
+  findOne(@Param() params: IdDto): Promise<string> {
+    return this.secretNoteService.findOne(params);
   }
 
   @Get(':id/encrypted')
-  findOneEncrypted(@Param('id') id: number): Promise<SecretNote> {
-    return this.secretNoteService.findOneEncrypted({ id });
+  findOneEncrypted(@Param() params: IdDto): Promise<SecretNote> {
+    return this.secretNoteService.findOneEncrypted(params);
   }
 
   @Put(':id')
-  update(@Param('id') id: number, @Body() updateSecretNoteDto: UpdateSecretNoteDto): Promise<SecretNote> {
-    return this.secretNoteService.update({ id }, updateSecretNoteDto);
+  update(@Param('id') id: string, @Body() updateSecretNoteDto: UpdateSecretNoteDto): Promise<SecretNote> {
+    const idDto: IdDto = { id: parseInt(id, 10) };
+    return this.secretNoteService.update(idDto, updateSecretNoteDto);
   }
 
   @Delete(':id')
-  remove(@Param('id') id: number): Promise<void> {
-    return this.secretNoteService.remove({ id });
+  remove(@Param() params: IdDto): Promise<void> {
+    return this.secretNoteService.remove(params);
   }
 }
