@@ -1,15 +1,22 @@
-import { Injectable, InternalServerErrorException, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  InternalServerErrorException,
+  Logger,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { SecretNote } from './secret-note.entity';
 import { EccService } from '../ecc/ecc.service';
 import { CreateSecretNoteDto, UpdateSecretNoteDto, IdDto } from './dto';
-import { SecretNoteNotFoundException, InvalidSecretNoteException } from '../exceptions/custom-exceptions';
+import {
+  SecretNoteNotFoundException,
+  InvalidSecretNoteException,
+} from '../exceptions/custom-exceptions';
 
 @Injectable()
 export class SecretNoteService {
   private readonly logger = new Logger(SecretNoteService.name);
-  
+
   constructor(
     @InjectRepository(SecretNote)
     private secretNoteRepository: Repository<SecretNote>,
@@ -69,11 +76,16 @@ export class SecretNoteService {
       if (error instanceof SecretNoteNotFoundException) {
         throw error;
       }
-      throw new InternalServerErrorException('Failed to retrieve encrypted note');
+      throw new InternalServerErrorException(
+        'Failed to retrieve encrypted note',
+      );
     }
   }
 
-  async update(idDto: IdDto, updateSecretNoteDto: UpdateSecretNoteDto): Promise<SecretNote> {
+  async update(
+    idDto: IdDto,
+    updateSecretNoteDto: UpdateSecretNoteDto,
+  ): Promise<SecretNote> {
     const { id } = idDto;
     if (!updateSecretNoteDto.note) {
       throw new InvalidSecretNoteException();
@@ -81,7 +93,9 @@ export class SecretNoteService {
     try {
       this.logger.debug(`Updating note with ID: ${id}`);
 
-      const existingNote = await this.secretNoteRepository.findOne({ where: { id } });
+      const existingNote = await this.secretNoteRepository.findOne({
+        where: { id },
+      });
       if (!existingNote) {
         this.logger.error(`Note with ID: ${id} not found`);
         throw new SecretNoteNotFoundException(id);
@@ -97,15 +111,16 @@ export class SecretNoteService {
       this.logger.debug(`Note saved: ${JSON.stringify(savedNote)}`);
       return savedNote;
     } catch (error) {
-      if (error instanceof SecretNoteNotFoundException || error instanceof InvalidSecretNoteException) {
+      if (
+        error instanceof SecretNoteNotFoundException ||
+        error instanceof InvalidSecretNoteException
+      ) {
         throw error;
       }
       this.logger.error(`Failed to update note with ID: ${id}`, error.stack);
       throw new InternalServerErrorException('Failed to update note');
     }
   }
-
-  
 
   async remove(idDto: IdDto): Promise<void> {
     const { id } = idDto;

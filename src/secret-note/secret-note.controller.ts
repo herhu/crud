@@ -1,4 +1,12 @@
-import { Controller, Get, Post, Body, Param, Delete, Put } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Param,
+  Delete,
+  Put,
+} from '@nestjs/common';
 import { SecretNoteService } from './secret-note.service';
 import { SecretNote } from './secret-note.entity';
 import { CreateSecretNoteDto, UpdateSecretNoteDto, IdDto } from './dto';
@@ -8,7 +16,9 @@ export class SecretNoteController {
   constructor(private readonly secretNoteService: SecretNoteService) {}
 
   @Post()
-  create(@Body() createSecretNoteDto: CreateSecretNoteDto): Promise<SecretNote> {
+  create(
+    @Body() createSecretNoteDto: CreateSecretNoteDto,
+  ): Promise<SecretNote> {
     return this.secretNoteService.create(createSecretNoteDto);
   }
 
@@ -28,7 +38,10 @@ export class SecretNoteController {
   }
 
   @Put(':id')
-  update(@Param('id') id: string, @Body() updateSecretNoteDto: UpdateSecretNoteDto): Promise<SecretNote> {
+  update(
+    @Param('id') id: string,
+    @Body() updateSecretNoteDto: UpdateSecretNoteDto,
+  ): Promise<SecretNote> {
     const idDto: IdDto = { id: parseInt(id, 10) };
     return this.secretNoteService.update(idDto, updateSecretNoteDto);
   }

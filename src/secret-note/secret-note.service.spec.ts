@@ -33,13 +33,18 @@ describe('SecretNoteService', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         SecretNoteService,
-        { provide: getRepositoryToken(SecretNote), useFactory: mockSecretNoteRepository },
+        {
+          provide: getRepositoryToken(SecretNote),
+          useFactory: mockSecretNoteRepository,
+        },
         { provide: EccService, useFactory: mockEccService },
       ],
     }).compile();
 
     service = module.get<SecretNoteService>(SecretNoteService);
-    repository = module.get<MockRepository<SecretNote>>(getRepositoryToken(SecretNote));
+    repository = module.get<MockRepository<SecretNote>>(
+      getRepositoryToken(SecretNote),
+    );
     eccService = module.get<EccService>(EccService);
   });
 
@@ -51,7 +56,11 @@ describe('SecretNoteService', () => {
     it('should create a secret note', async () => {
       const createSecretNoteDto: CreateSecretNoteDto = { note: 'test note' };
       const encryptedData = 'encryptedData';
-      const savedNote = { id: 1, note: encryptedData, ephemeralPublicKey: eccService.predefinedPublicKey };
+      const savedNote = {
+        id: 1,
+        note: encryptedData,
+        ephemeralPublicKey: eccService.predefinedPublicKey,
+      };
 
       repository.create.mockReturnValue(savedNote);
       repository.save.mockResolvedValue(savedNote);
@@ -69,7 +78,9 @@ describe('SecretNoteService', () => {
     it('should throw an error if note is empty', async () => {
       const createSecretNoteDto: CreateSecretNoteDto = { note: '' };
 
-      await expect(service.create(createSecretNoteDto)).rejects.toThrow(BadRequestException);
+      await expect(service.create(createSecretNoteDto)).rejects.toThrow(
+        BadRequestException,
+      );
     });
   });
 
@@ -118,7 +129,9 @@ describe('SecretNoteService', () => {
       repository.findOne.mockResolvedValue(null);
       const idDto: IdDto = { id: 1 };
 
-      await expect(service.findOneEncrypted(idDto)).rejects.toThrow(NotFoundException);
+      await expect(service.findOneEncrypted(idDto)).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 
@@ -127,7 +140,11 @@ describe('SecretNoteService', () => {
       const idDto: IdDto = { id: 1 };
       const updateSecretNoteDto: UpdateSecretNoteDto = { note: 'updated note' };
       const encryptedData = 'encryptedData';
-      const updatedNote = { id: 1, note: encryptedData, ephemeralPublicKey: eccService.predefinedPublicKey };
+      const updatedNote = {
+        id: 1,
+        note: encryptedData,
+        ephemeralPublicKey: eccService.predefinedPublicKey,
+      };
 
       jest.spyOn(repository, 'findOne').mockResolvedValue(updatedNote);
       jest.spyOn(repository, 'save').mockResolvedValue(updatedNote);
@@ -146,14 +163,18 @@ describe('SecretNoteService', () => {
 
       jest.spyOn(repository, 'findOne').mockResolvedValue(null);
 
-      await expect(service.update(idDto, updateSecretNoteDto)).rejects.toThrow(NotFoundException);
+      await expect(service.update(idDto, updateSecretNoteDto)).rejects.toThrow(
+        NotFoundException,
+      );
     });
 
     it('should throw an error if note content is empty', async () => {
       const idDto: IdDto = { id: 1 };
       const updateSecretNoteDto: UpdateSecretNoteDto = { note: '' };
 
-      await expect(service.update(idDto, updateSecretNoteDto)).rejects.toThrow(BadRequestException);
+      await expect(service.update(idDto, updateSecretNoteDto)).rejects.toThrow(
+        BadRequestException,
+      );
     });
   });
 

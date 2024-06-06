@@ -130,7 +130,9 @@ describe('SecretNoteController (e2e)', () => {
       .get('/secret-notes/9999')
       .expect(404)
       .then((response) => {
-        expect(response.body.message).toBe('Secret note with ID 9999 not found');
+        expect(response.body.message).toBe(
+          'Secret note with ID 9999 not found',
+        );
       });
   });
 });

@@ -9,18 +9,36 @@ describe('SecretNoteController', () => {
   let service: SecretNoteService;
 
   const mockSecretNoteService = {
-    create: jest.fn().mockImplementation((dto: CreateSecretNoteDto) => Promise.resolve({ id: 1, ...dto })),
+    create: jest
+      .fn()
+      .mockImplementation((dto: CreateSecretNoteDto) =>
+        Promise.resolve({ id: 1, ...dto }),
+      ),
     findAll: jest.fn().mockResolvedValue([{ id: 1, createdAt: new Date() }]),
-    findOne: jest.fn().mockImplementation((idDto: { id: number }) => Promise.resolve('Decrypted note content')),
-    findOneEncrypted: jest.fn().mockImplementation((idDto: { id: number }) => Promise.resolve(new SecretNote())),
-    update: jest.fn().mockImplementation((idDto: { id: number }, dto: UpdateSecretNoteDto) => Promise.resolve({ id: idDto.id, ...dto })),
+    findOne: jest
+      .fn()
+      .mockImplementation((idDto: { id: number }) =>
+        Promise.resolve(`Decrypted note content ${idDto.id}`),
+      ),
+    findOneEncrypted: jest
+      .fn()
+      .mockImplementation((_idDto: { id: number }) =>
+        Promise.resolve(new SecretNote()),
+      ),
+    update: jest
+      .fn()
+      .mockImplementation((idDto: { id: number }, dto: UpdateSecretNoteDto) =>
+        Promise.resolve({ id: idDto.id, ...dto }),
+      ),
     remove: jest.fn().mockResolvedValue(undefined),
   };
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [SecretNoteController],
-      providers: [{ provide: SecretNoteService, useValue: mockSecretNoteService }],
+      providers: [
+        { provide: SecretNoteService, useValue: mockSecretNoteService },
+      ],
     }).compile();
 
     controller = module.get<SecretNoteController>(SecretNoteController);
@@ -41,12 +59,16 @@ describe('SecretNoteController', () => {
   });
 
   it('should return an array of secret notes', async () => {
-    expect(await controller.findAll()).toEqual([{ id: 1, createdAt: expect.any(Date) }]);
+    expect(await controller.findAll()).toEqual([
+      { id: 1, createdAt: expect.any(Date) },
+    ]);
   });
 
   it('should return a single secret note content', async () => {
-    const id: IdDto = { id: 1 };
-    expect(await controller.findOne(id)).toBe('Decrypted note content');
+    const idD: IdDto = { id: 1 };
+    expect(await controller.findOne(idD)).toBe(
+      `Decrypted note content ${idD.id}`,
+    );
     expect(service.findOne).toHaveBeenCalledWith({ id: 1 });
   });
 
