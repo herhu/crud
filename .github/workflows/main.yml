@@ -38,11 +38,17 @@ jobs:
     - name: Install dependencies in container
       run: docker compose exec app npm install
 
+    - name: Run format
+      run: docker compose exec app npm run format
+
     - name: Run lint
       run: docker compose exec app npm run lint
 
-    - name: Run tests
+    - name: Run unit tests
       run: docker compose exec app npm run test
+
+    - name: Run end-to-end tests
+      run: docker compose exec app npm run test:e2e
 
     - name: Build application
       run: docker compose exec app npm run build
