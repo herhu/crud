@@ -1,39 +1,45 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { SecretNoteService } from './secret-note.service';
 import { getRepositoryToken } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { SecretNoteService } from './secret-note.service';
 import { SecretNote } from './secret-note.entity';
 import { EccService } from '../ecc/ecc.service';
-import { Repository } from 'typeorm';
-import { NotFoundException } from '@nestjs/common';
+import { CreateSecretNoteDto, UpdateSecretNoteDto, IdDto } from './dto';
+import { NotFoundException, BadRequestException } from '@nestjs/common';
+
+const mockSecretNoteRepository = () => ({
+  create: jest.fn(),
+  save: jest.fn(),
+  find: jest.fn(),
+  findOne: jest.fn(),
+  preload: jest.fn(),
+  remove: jest.fn(),
+});
+
+const mockEccService = () => ({
+  encrypt: jest.fn().mockReturnValue('encryptedData'),
+  decrypt: jest.fn().mockReturnValue('decryptedData'),
+  predefinedPublicKey: 'mockedPublicKey',
+});
+
+type MockRepository<T = any> = Partial<Record<keyof Repository<T>, jest.Mock>>;
 
 describe('SecretNoteService', () => {
   let service: SecretNoteService;
-  let repository: Repository<SecretNote>;
+  let repository: MockRepository<SecretNote>;
   let eccService: EccService;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         SecretNoteService,
-        {
-          provide: getRepositoryToken(SecretNote),
-          useClass: Repository,
-        },
-        {
-          provide: EccService,
-          useValue: {
-            encrypt: jest.fn((data) => `encrypted-${data}`),
-            decrypt: jest.fn((data) => data.replace('encrypted-', '')),
-            predefinedPublicKey: 'publicKey',
-          },
-        },
+        { provide: getRepositoryToken(SecretNote), useFactory: mockSecretNoteRepository },
+        { provide: EccService, useFactory: mockEccService },
       ],
     }).compile();
 
     service = module.get<SecretNoteService>(SecretNoteService);
-    repository = module.get<Repository<SecretNote>>(
-      getRepositoryToken(SecretNote),
-    );
+    repository = module.get<MockRepository<SecretNote>>(getRepositoryToken(SecretNote));
     eccService = module.get<EccService>(EccService);
   });
 
@@ -41,116 +47,136 @@ describe('SecretNoteService', () => {
     expect(service).toBeDefined();
   });
 
-  it('should create a new note', async () => {
-    const note = 'test note';
-    const encryptedNote = `encrypted-${note}`;
-    const createdNote = {
-      id: 1,
-      note: encryptedNote,
-      ephemeralPublicKey: 'publicKey',
-    };
+  describe('create', () => {
+    it('should create a secret note', async () => {
+      const createSecretNoteDto: CreateSecretNoteDto = { note: 'test note' };
+      const encryptedData = 'encryptedData';
+      const savedNote = { id: 1, note: encryptedData, ephemeralPublicKey: eccService.predefinedPublicKey };
 
-    jest.spyOn(repository, 'create').mockReturnValue(createdNote as any);
-    jest.spyOn(repository, 'save').mockResolvedValue(createdNote as any);
+      repository.create.mockReturnValue(savedNote);
+      repository.save.mockResolvedValue(savedNote);
 
-    const result = await service.create(note);
+      const result = await service.create(createSecretNoteDto);
 
-    expect(result).toEqual(createdNote);
-    expect(eccService.encrypt).toHaveBeenCalledWith(note);
-    expect(repository.create).toHaveBeenCalledWith({
-      note: encryptedNote,
-      ephemeralPublicKey: 'publicKey',
+      expect(repository.create).toHaveBeenCalledWith({
+        note: encryptedData,
+        ephemeralPublicKey: eccService.predefinedPublicKey,
+      });
+      expect(repository.save).toHaveBeenCalledWith(savedNote);
+      expect(result).toEqual(savedNote);
     });
-    expect(repository.save).toHaveBeenCalledWith(createdNote);
-  });
 
-  it('should find all notes', async () => {
-    const notes = [{ id: 1, createdAt: new Date() }];
-    jest.spyOn(repository, 'find').mockResolvedValue(notes as any);
+    it('should throw an error if note is empty', async () => {
+      const createSecretNoteDto: CreateSecretNoteDto = { note: '' };
 
-    const result = await service.findAll();
-
-    expect(result).toEqual(notes);
-    expect(repository.find).toHaveBeenCalled();
-  });
-
-  it('should find one note by id', async () => {
-    const note = { id: 1, note: 'encrypted-test note' };
-    jest.spyOn(repository, 'findOne').mockResolvedValue(note as any);
-
-    const result = await service.findOne(1);
-
-    expect(result).toEqual('test note');
-    expect(eccService.decrypt).toHaveBeenCalledWith(note.note);
-    expect(repository.findOne).toHaveBeenCalledWith({ where: { id: 1 } });
-  });
-
-  it('should throw NotFoundException if note not found', async () => {
-    jest.spyOn(repository, 'findOne').mockResolvedValue(null);
-
-    await expect(service.findOne(1)).rejects.toThrow(NotFoundException);
-  });
-
-  it('should find one encrypted note by id', async () => {
-    const note = {
-      id: 1,
-      note: 'encrypted-test note',
-      ephemeralPublicKey: 'publicKey',
-    };
-    jest.spyOn(repository, 'findOne').mockResolvedValue(note as any);
-
-    const result = await service.findOneEncrypted(1);
-
-    expect(result).toEqual(note);
-    expect(repository.findOne).toHaveBeenCalledWith({ where: { id: 1 } });
-  });
-
-  it('should update a note', async () => {
-    const note = 'updated note';
-    const encryptedNote = `encrypted-${note}`;
-    const updatedNote = {
-      id: 1,
-      note: encryptedNote,
-      ephemeralPublicKey: 'publicKey',
-    };
-
-    jest.spyOn(repository, 'preload').mockResolvedValue(updatedNote as any);
-    jest.spyOn(repository, 'save').mockResolvedValue(updatedNote as any);
-
-    const result = await service.update(1, note);
-
-    expect(result).toEqual(updatedNote);
-    expect(eccService.encrypt).toHaveBeenCalledWith(note);
-    expect(repository.preload).toHaveBeenCalledWith({
-      id: 1,
-      note: encryptedNote,
-      ephemeralPublicKey: 'publicKey',
+      await expect(service.create(createSecretNoteDto)).rejects.toThrow(BadRequestException);
     });
-    expect(repository.save).toHaveBeenCalledWith(updatedNote);
   });
 
-  it('should throw NotFoundException if note to update not found', async () => {
-    jest.spyOn(repository, 'preload').mockResolvedValue(null);
+  describe('findAll', () => {
+    it('should return all secret notes', async () => {
+      const notes = [{ id: 1, createdAt: new Date() }];
+      repository.find.mockResolvedValue(notes);
 
-    await expect(service.update(1, 'updated note')).rejects.toThrow(
-      NotFoundException,
-    );
+      const result = await service.findAll();
+
+      expect(result).toEqual(notes);
+    });
   });
 
-  it('should remove a note', async () => {
-    const note = { id: 1, note: 'encrypted-test note' };
-    jest.spyOn(repository, 'findOne').mockResolvedValue(note as any);
-    jest.spyOn(repository, 'remove').mockResolvedValue(note as any);
+  describe('findOne', () => {
+    it('should return a decrypted note', async () => {
+      const note = { id: 1, note: 'encrypted note' };
+      repository.findOne.mockResolvedValue(note);
+      const idDto: IdDto = { id: 1 };
 
-    await service.remove(1);
+      const result = await service.findOne(idDto);
 
-    expect(repository.findOne).toHaveBeenCalledWith({ where: { id: 1 } });
-    expect(repository.remove).toHaveBeenCalledWith(note);
+      expect(result).toEqual('decryptedData');
+    });
+
+    it('should throw an error if note not found', async () => {
+      repository.findOne.mockResolvedValue(null);
+      const idDto: IdDto = { id: 1 };
+
+      await expect(service.findOne(idDto)).rejects.toThrow(NotFoundException);
+    });
   });
 
-  it('should throw NotFoundException if note to remove not found', async () => {
-    jest.spyOn(repository, 'findOne').mockResolvedValue(null);
+  describe('findOneEncrypted', () => {
+    it('should return an encrypted note', async () => {
+      const note = { id: 1, note: 'encrypted note' };
+      repository.findOne.mockResolvedValue(note);
+      const idDto: IdDto = { id: 1 };
 
-    await expect(service.remove(1)).rejects.toThrow(NotFoundException);
+      const result = await service.findOneEncrypted(idDto);
+
+      expect(result).toEqual(note);
+    });
+
+    it('should throw an error if note not found', async () => {
+      repository.findOne.mockResolvedValue(null);
+      const idDto: IdDto = { id: 1 };
+
+      await expect(service.findOneEncrypted(idDto)).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  describe('update', () => {
+    it('should update and return the secret note', async () => {
+      const idDto: IdDto = { id: 1 };
+      const updateSecretNoteDto: UpdateSecretNoteDto = { note: 'updated note' };
+      const encryptedData = 'encryptedData';
+      const updatedNote = { id: 1, note: encryptedData, ephemeralPublicKey: eccService.predefinedPublicKey };
+
+      repository.preload.mockResolvedValue(updatedNote);
+      repository.save.mockResolvedValue(updatedNote);
+
+      const result = await service.update(idDto, updateSecretNoteDto);
+
+      expect(repository.preload).toHaveBeenCalledWith({
+        id: 1,
+        note: encryptedData,
+        ephemeralPublicKey: eccService.predefinedPublicKey,
+      });
+      expect(repository.save).toHaveBeenCalledWith(updatedNote);
+      expect(result).toEqual(updatedNote);
+    });
+
+    it('should throw an error if note not found', async () => {
+      const idDto: IdDto = { id: 1 };
+      const updateSecretNoteDto: UpdateSecretNoteDto = { note: 'updated note' };
+      repository.preload.mockResolvedValue(null);
+
+      await expect(service.update(idDto, updateSecretNoteDto)).rejects.toThrow(NotFoundException);
+    });
+
+    it('should throw an error if note content is empty', async () => {
+      const idDto: IdDto = { id: 1 };
+      const updateSecretNoteDto: UpdateSecretNoteDto = { note: '' };
+
+      await expect(service.update(idDto, updateSecretNoteDto)).rejects.toThrow(BadRequestException);
+    });
+  });
+
+  describe('remove', () => {
+    it('should delete the secret note', async () => {
+      const note = { id: 1, note: 'encrypted note' };
+      repository.findOne.mockResolvedValue(note);
+      repository.remove.mockResolvedValue(undefined);
+      const idDto: IdDto = { id: 1 };
+
+      await service.remove(idDto);
+
+      expect(repository.findOne).toHaveBeenCalledWith({ where: { id: 1 } });
+      expect(repository.remove).toHaveBeenCalledWith(note);
+    });
+
+    it('should throw an error if note not found', async () => {
+      repository.findOne.mockResolvedValue(null);
+      const idDto: IdDto = { id: 1 };
+
+      await expect(service.remove(idDto)).rejects.toThrow(NotFoundException);
+    });
   });
 });

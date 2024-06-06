@@ -1,10 +1,10 @@
-// src/secret-note/secret-note.service.ts
-
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { SecretNote } from './secret-note.entity';
 import { EccService } from '../ecc/ecc.service';
+import { CreateSecretNoteDto, UpdateSecretNoteDto, IdDto } from './dto';
+import { SecretNoteNotFoundException, InvalidSecretNoteException } from '../exceptions/custom-exceptions';
 
 @Injectable()
 export class SecretNoteService {
@@ -14,55 +14,100 @@ export class SecretNoteService {
     private readonly eccService: EccService,
   ) {}
 
-  async create(note: string): Promise<SecretNote> {
-    const encryptedData = this.eccService.encrypt(note);
-    const newNote = this.secretNoteRepository.create({
-      note: encryptedData,
-      ephemeralPublicKey: this.eccService.predefinedPublicKey,
-    });
-    return this.secretNoteRepository.save(newNote);
+  async create(createSecretNoteDto: CreateSecretNoteDto): Promise<SecretNote> {
+    if (!createSecretNoteDto.note) {
+      throw new InvalidSecretNoteException();
+    }
+    try {
+      const encryptedData = this.eccService.encrypt(createSecretNoteDto.note);
+      const newNote = this.secretNoteRepository.create({
+        note: encryptedData,
+        ephemeralPublicKey: this.eccService.predefinedPublicKey,
+      });
+      return await this.secretNoteRepository.save(newNote);
+    } catch (error) {
+      throw new InternalServerErrorException('Failed to create note');
+    }
   }
 
   async findAll(): Promise<Partial<SecretNote>[]> {
-    const notes = await this.secretNoteRepository.find();
-    return notes.map((note) => ({ id: note.id, createdAt: note.createdAt }));
+    try {
+      const notes = await this.secretNoteRepository.find();
+      return notes.map((note) => ({ id: note.id, createdAt: note.createdAt }));
+    } catch (error) {
+      throw new InternalServerErrorException('Failed to retrieve notes');
+    }
   }
 
-  async findOne(id: number): Promise<string> {
-    const note = await this.secretNoteRepository.findOne({ where: { id } });
-    if (!note) {
-      throw new NotFoundException('Note not found');
+  async findOne(idDto: IdDto): Promise<string> {
+    const { id } = idDto;
+    try {
+      const note = await this.secretNoteRepository.findOne({ where: { id } });
+      if (!note) {
+        throw new SecretNoteNotFoundException(id);
+      }
+      return this.eccService.decrypt(note.note);
+    } catch (error) {
+      if (error instanceof SecretNoteNotFoundException) {
+        throw error;
+      }
+      throw new InternalServerErrorException('Failed to retrieve note');
     }
-
-    return this.eccService.decrypt(note.note);
   }
 
-  async findOneEncrypted(id: number): Promise<SecretNote> {
-    const note = await this.secretNoteRepository.findOne({ where: { id } });
-    if (!note) {
-      throw new NotFoundException('Note not found');
+  async findOneEncrypted(idDto: IdDto): Promise<SecretNote> {
+    const { id } = idDto;
+    try {
+      const note = await this.secretNoteRepository.findOne({ where: { id } });
+      if (!note) {
+        throw new SecretNoteNotFoundException(id);
+      }
+      return note;
+    } catch (error) {
+      if (error instanceof SecretNoteNotFoundException) {
+        throw error;
+      }
+      throw new InternalServerErrorException('Failed to retrieve encrypted note');
     }
-    return note;
   }
 
-  async update(id: number, newNote: string): Promise<SecretNote> {
-    const encryptedData = this.eccService.encrypt(newNote);
-    const note = await this.secretNoteRepository.preload({
-      id,
-      note: encryptedData,
-      ephemeralPublicKey: this.eccService.predefinedPublicKey,
-    });
-    if (!note) {
-      throw new NotFoundException('Note not found');
+  async update(idDto: IdDto, updateSecretNoteDto: UpdateSecretNoteDto): Promise<SecretNote> {
+    const { id } = idDto;
+    if (!updateSecretNoteDto.note) {
+      throw new InvalidSecretNoteException();
     }
-    return this.secretNoteRepository.save(note);
+    try {
+      const encryptedData = this.eccService.encrypt(updateSecretNoteDto.note);
+      const note = await this.secretNoteRepository.preload({
+        id,
+        note: encryptedData,
+        ephemeralPublicKey: this.eccService.predefinedPublicKey,
+      });
+      if (!note) {
+        throw new SecretNoteNotFoundException(id);
+      }
+      return await this.secretNoteRepository.save(note);
+    } catch (error) {
+      if (error instanceof SecretNoteNotFoundException || error instanceof InvalidSecretNoteException) {
+        throw error;
+      }
+      throw new InternalServerErrorException('Failed to update note');
+    }
   }
 
-  async remove(id: number): Promise<void> {
-    const note = await this.secretNoteRepository.findOne({ where: { id } });
-    if (!note) {
-      throw new NotFoundException('Note not found');
+  async remove(idDto: IdDto): Promise<void> {
+    const { id } = idDto;
+    try {
+      const note = await this.secretNoteRepository.findOne({ where: { id } });
+      if (!note) {
+        throw new SecretNoteNotFoundException(id);
+      }
+      await this.secretNoteRepository.remove(note);
+    } catch (error) {
+      if (error instanceof SecretNoteNotFoundException) {
+        throw error;
+      }
+      throw new InternalServerErrorException('Failed to delete note');
     }
-    await this.secretNoteRepository.remove(note);
   }
 }
