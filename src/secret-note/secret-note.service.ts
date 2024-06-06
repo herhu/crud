@@ -16,13 +16,16 @@ export class SecretNoteService {
 
   async create(note: string): Promise<SecretNote> {
     const encryptedData = this.eccService.encrypt(note);
-    const newNote = this.secretNoteRepository.create({ note: encryptedData, ephemeralPublicKey: this.eccService.predefinedPublicKey });
+    const newNote = this.secretNoteRepository.create({
+      note: encryptedData,
+      ephemeralPublicKey: this.eccService.predefinedPublicKey,
+    });
     return this.secretNoteRepository.save(newNote);
   }
 
   async findAll(): Promise<Partial<SecretNote>[]> {
     const notes = await this.secretNoteRepository.find();
-    return notes.map(note => ({ id: note.id, createdAt: note.createdAt }));
+    return notes.map((note) => ({ id: note.id, createdAt: note.createdAt }));
   }
 
   async findOne(id: number): Promise<string> {
@@ -44,7 +47,11 @@ export class SecretNoteService {
 
   async update(id: number, newNote: string): Promise<SecretNote> {
     const encryptedData = this.eccService.encrypt(newNote);
-    const note = await this.secretNoteRepository.preload({ id, note: encryptedData, ephemeralPublicKey: this.eccService.predefinedPublicKey });
+    const note = await this.secretNoteRepository.preload({
+      id,
+      note: encryptedData,
+      ephemeralPublicKey: this.eccService.predefinedPublicKey,
+    });
     if (!note) {
       throw new NotFoundException('Note not found');
     }

@@ -35,6 +35,12 @@ jobs:
     - name: Build and run Docker Compose
       run: docker compose up --build -d
 
+    - name: Install dependencies in container
+      run: docker compose exec app npm install
+
+    - name: Run lint
+      run: docker compose exec app npm run lint
+
     - name: Run tests
       run: docker compose exec app npm run test
 

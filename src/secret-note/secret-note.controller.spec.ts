@@ -1,7 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { SecretNoteController } from './secret-note.controller';
 import { SecretNoteService } from './secret-note.service';
-import { SecretNote } from './secret-note.entity';
 
 describe('SecretNoteController', () => {
   let controller: SecretNoteController;
@@ -35,7 +34,11 @@ describe('SecretNoteController', () => {
 
   it('should create a new note', async () => {
     const note = 'test note';
-    const createdNote = { id: 1, note: 'encrypted-test note', ephemeralPublicKey: 'publicKey' };
+    const createdNote = {
+      id: 1,
+      note: 'encrypted-test note',
+      ephemeralPublicKey: 'publicKey',
+    };
     jest.spyOn(service, 'create').mockResolvedValue(createdNote as any);
 
     const result = await controller.create(note);
@@ -65,7 +68,11 @@ describe('SecretNoteController', () => {
   });
 
   it('should find one encrypted note by id', async () => {
-    const note = { id: 1, note: 'encrypted-test note', ephemeralPublicKey: 'publicKey' };
+    const note = {
+      id: 1,
+      note: 'encrypted-test note',
+      ephemeralPublicKey: 'publicKey',
+    };
     jest.spyOn(service, 'findOneEncrypted').mockResolvedValue(note as any);
 
     const result = await controller.findOneEncrypted('1');
@@ -76,7 +83,11 @@ describe('SecretNoteController', () => {
 
   it('should update a note', async () => {
     const note = 'updated note';
-    const updatedNote = { id: 1, note: 'encrypted-updated note', ephemeralPublicKey: 'publicKey' };
+    const updatedNote = {
+      id: 1,
+      note: 'encrypted-updated note',
+      ephemeralPublicKey: 'publicKey',
+    };
     jest.spyOn(service, 'update').mockResolvedValue(updatedNote as any);
 
     const result = await controller.update('1', note);

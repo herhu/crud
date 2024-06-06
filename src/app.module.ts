@@ -21,5 +21,5 @@ import { EccService } from './ecc/ecc.service';
     SecretNoteModule,
   ],
   providers: [EccService],
-}) 
+})
 export class AppModule {}

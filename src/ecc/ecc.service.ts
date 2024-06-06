@@ -7,8 +7,8 @@ import * as crypto from 'crypto';
 @Injectable()
 export class EccService {
   private ec: elliptic.ec;
-   predefinedPublicKey: string;
-   predefinedPrivateKey: string;
+  predefinedPublicKey: string;
+  predefinedPrivateKey: string;
 
   constructor() {
     this.ec = new elliptic.ec('curve25519');
@@ -25,7 +25,10 @@ export class EccService {
   }
 
   private hashSharedSecret(sharedSecret: elliptic.BN): Buffer {
-    return crypto.createHash('sha256').update(sharedSecret.toString('hex')).digest();
+    return crypto
+      .createHash('sha256')
+      .update(sharedSecret.toString('hex'))
+      .digest();
   }
 
   encrypt(data: string): string {
@@ -45,13 +48,18 @@ export class EccService {
   }
 
   decrypt(encryptedData: string): string {
-    const [ephemeralPublicKey, iv, authTag, encrypted] = encryptedData.split('|');
+    const [ephemeralPublicKey, iv, authTag, encrypted] =
+      encryptedData.split('|');
     const keyPair = this.ec.keyFromPrivate(this.predefinedPrivateKey, 'hex');
     const ephemeralKeyPair = this.ec.keyFromPublic(ephemeralPublicKey, 'hex');
     const sharedSecret = keyPair.derive(ephemeralKeyPair.getPublic());
     const key = this.hashSharedSecret(sharedSecret);
 
-    const decipher = crypto.createDecipheriv('aes-256-gcm', key, Buffer.from(iv, 'hex'));
+    const decipher = crypto.createDecipheriv(
+      'aes-256-gcm',
+      key,
+      Buffer.from(iv, 'hex'),
+    );
     decipher.setAuthTag(Buffer.from(authTag, 'hex'));
 
     let decrypted = decipher.update(encrypted, 'hex', 'utf8');

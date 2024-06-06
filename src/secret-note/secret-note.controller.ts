@@ -1,4 +1,12 @@
-import { Controller, Get, Post, Body, Param, Delete, Put } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Param,
+  Delete,
+  Put,
+} from '@nestjs/common';
 import { SecretNoteService } from './secret-note.service';
 import { SecretNote } from './secret-note.entity';
 
@@ -27,7 +35,10 @@ export class SecretNoteController {
   }
 
   @Put(':id')
-  update(@Param('id') id: string, @Body('note') note: string): Promise<SecretNote> {
+  update(
+    @Param('id') id: string,
+    @Body('note') note: string,
+  ): Promise<SecretNote> {
     return this.secretNoteService.update(+id, note);
   }
 
