@@ -140,21 +140,23 @@ describe('SecretNoteService', () => {
       const idDto: IdDto = { id: 1 };
       const updateSecretNoteDto: UpdateSecretNoteDto = { note: 'updated note' };
       const encryptedData = 'encryptedData';
-      const updatedNote = {
+      const decryptedData = 'decryptedData';
+      const existingNote = {
         id: 1,
         note: encryptedData,
         ephemeralPublicKey: eccService.predefinedPublicKey,
       };
 
-      jest.spyOn(repository, 'findOne').mockResolvedValue(updatedNote);
-      jest.spyOn(repository, 'save').mockResolvedValue(updatedNote);
+      jest.spyOn(repository, 'findOne').mockResolvedValue(existingNote);
+      jest.spyOn(repository, 'save').mockResolvedValue(existingNote);
       jest.spyOn(eccService, 'encrypt').mockReturnValue(encryptedData);
+      jest.spyOn(eccService, 'decrypt').mockReturnValue(decryptedData);
 
       const result = await service.update(idDto, updateSecretNoteDto);
 
       expect(repository.findOne).toHaveBeenCalledWith({ where: { id: 1 } });
-      expect(repository.save).toHaveBeenCalledWith(updatedNote);
-      expect(result).toEqual(updatedNote);
+      expect(repository.save).toHaveBeenCalledWith(existingNote);
+      expect(result).toEqual({ ...existingNote, note: decryptedData });
     });
 
     it('should throw an error if note not found', async () => {

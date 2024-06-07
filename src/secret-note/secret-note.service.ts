@@ -92,7 +92,7 @@ export class SecretNoteService {
     }
     try {
       this.logger.debug(`Updating note with ID: ${id}`);
-
+  
       const existingNote = await this.secretNoteRepository.findOne({
         where: { id },
       });
@@ -100,16 +100,19 @@ export class SecretNoteService {
         this.logger.error(`Note with ID: ${id} not found`);
         throw new SecretNoteNotFoundException(id);
       }
-
+  
       const encryptedData = this.eccService.encrypt(updateSecretNoteDto.note);
       this.logger.debug(`Encrypted data: ${encryptedData}`);
-
+  
       existingNote.note = encryptedData;
       existingNote.ephemeralPublicKey = this.eccService.predefinedPublicKey;
-
+  
       const savedNote = await this.secretNoteRepository.save(existingNote);
       this.logger.debug(`Note saved: ${JSON.stringify(savedNote)}`);
-      return savedNote;
+  
+      // Decrypting the note before returning
+      const decryptedNote = this.eccService.decrypt(savedNote.note);
+      return { ...savedNote, note: decryptedNote };
     } catch (error) {
       if (
         error instanceof SecretNoteNotFoundException ||
@@ -121,6 +124,7 @@ export class SecretNoteService {
       throw new InternalServerErrorException('Failed to update note');
     }
   }
+  
 
   async remove(idDto: IdDto): Promise<void> {
     const { id } = idDto;

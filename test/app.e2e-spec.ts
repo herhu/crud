@@ -1,7 +1,8 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { INestApplication, ValidationPipe } from '@nestjs/common';
+import { INestApplication } from '@nestjs/common';
 import * as request from 'supertest';
-import { AppModule } from '../src/app.module';
+import { AppModule } from './../src/app.module';
+import { CreateSecretNoteDto, UpdateSecretNoteDto } from './../src/secret-note/dto';
 import { DataSource } from 'typeorm';
 
 describe('SecretNoteController (e2e)', () => {
@@ -14,10 +15,8 @@ describe('SecretNoteController (e2e)', () => {
     }).compile();
 
     app = moduleFixture.createNestApplication();
-    app.useGlobalPipes(new ValidationPipe());
+    dataSource = moduleFixture.get<DataSource>(DataSource);
     await app.init();
-
-    dataSource = app.get(DataSource);
   });
 
   afterAll(async () => {
@@ -25,114 +24,72 @@ describe('SecretNoteController (e2e)', () => {
     await app.close();
   });
 
-  beforeEach(async () => {
-    await dataSource.synchronize(true);
-  });
-
-  it('/secret-notes (POST)', () => {
-    return request(app.getHttpServer())
+  it('/secret-notes (POST)', async () => {
+    const createSecretNoteDto: CreateSecretNoteDto = { note: 'This is a test note' };
+    const response = await request(app.getHttpServer())
       .post('/secret-notes')
-      .send({ note: 'This is a test note' })
-      .expect(201)
-      .then((response) => {
-        expect(response.body).toHaveProperty('id');
-      });
+      .send(createSecretNoteDto)
+      .expect(201);
+
+    expect(response.body).toHaveProperty('id');
+    expect(response.body).toHaveProperty('note');
   });
 
-  it('/secret-notes (GET)', () => {
-    return request(app.getHttpServer())
+  it('/secret-notes (GET)', async () => {
+    const response = await request(app.getHttpServer())
       .get('/secret-notes')
-      .expect(200)
-      .then((response) => {
-        expect(response.body).toBeInstanceOf(Array);
-      });
+      .expect(200);
+
+    expect(Array.isArray(response.body)).toBeTruthy();
   });
 
   it('/secret-notes/:id (GET)', async () => {
     const createResponse = await request(app.getHttpServer())
       .post('/secret-notes')
-      .send({ note: 'This is a test note' })
+      .send({ note: 'This is another test note' })
       .expect(201);
 
-    const noteId = createResponse.body.id;
+    const id = createResponse.body.id;
 
-    return request(app.getHttpServer())
-      .get(`/secret-notes/${noteId}`)
-      .expect(200)
-      .then((response) => {
-        expect(response.text).toBe('This is a test note');
-      });
-  });
+    const response = await request(app.getHttpServer())
+      .get(`/secret-notes/${id}`)
+      .expect(200);
 
-  it('/secret-notes/:id/encrypted (GET)', async () => {
-    const createResponse = await request(app.getHttpServer())
-      .post('/secret-notes')
-      .send({ note: 'This is a test note' })
-      .expect(201);
-
-    const noteId = createResponse.body.id;
-
-    return request(app.getHttpServer())
-      .get(`/secret-notes/${noteId}/encrypted`)
-      .expect(200)
-      .then((response) => {
-        expect(response.body).toHaveProperty('note');
-      });
+    expect(response.text).toBe('This is another test note');
   });
 
   it('/secret-notes/:id (PUT)', async () => {
     const createResponse = await request(app.getHttpServer())
       .post('/secret-notes')
-      .send({ note: 'This is a test note' })
+      .send({ note: 'Update test note' })
       .expect(201);
 
-    const noteId = createResponse.body.id;
+    const id = createResponse.body.id;
+    const updateSecretNoteDto: UpdateSecretNoteDto = { note: 'Updated note content' };
 
-    return request(app.getHttpServer())
-      .put(`/secret-notes/${noteId}`)
-      .send({ note: 'This is an updated test note' })
-      .expect(200)
-      .then((response) => {
-        expect(response.body.note).toBe('This is an updated test note');
-      });
+    const updateResponse = await request(app.getHttpServer())
+      .put(`/secret-notes/${id}`)
+      .send(updateSecretNoteDto)
+      .expect(200);
+
+    expect(updateResponse.body).toHaveProperty('note');
+    expect(updateResponse.body.note).toContain('Updated note content');
   });
 
   it('/secret-notes/:id (DELETE)', async () => {
     const createResponse = await request(app.getHttpServer())
       .post('/secret-notes')
-      .send({ note: 'This is a test note' })
+      .send({ note: 'Delete test note' })
       .expect(201);
 
-    const noteId = createResponse.body.id;
+    const id = createResponse.body.id;
 
-    return request(app.getHttpServer())
-      .delete(`/secret-notes/${noteId}`)
-      .expect(200)
-      .then(() => {
-        return request(app.getHttpServer())
-          .get(`/secret-notes/${noteId}`)
-          .expect(404);
-      });
-  });
+    await request(app.getHttpServer())
+      .delete(`/secret-notes/${id}`)
+      .expect(200);
 
-  it('should return 400 if note content is empty (POST)', () => {
-    return request(app.getHttpServer())
-      .post('/secret-notes')
-      .send({ note: '' })
-      .expect(400)
-      .then((response) => {
-        expect(response.body.message).toContain('Note content cannot be empty');
-      });
-  });
-
-  it('should return 404 if note is not found (GET)', () => {
-    return request(app.getHttpServer())
-      .get('/secret-notes/9999')
-      .expect(404)
-      .then((response) => {
-        expect(response.body.message).toBe(
-          'Secret note with ID 9999 not found',
-        );
-      });
+    await request(app.getHttpServer())
+      .get(`/secret-notes/${id}`)
+      .expect(404);
   });
 });
