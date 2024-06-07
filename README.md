@@ -1,73 +1,118 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="200" alt="Nest Logo" /></a>
-</p>
+To troubleshoot the encryption and decryption process with your current setup, let's manually test the endpoints using `curl`. This will help us ensure that the `EccService` is functioning correctly and the server is properly handling requests.
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+### 1. Start Your Server
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://coveralls.io/github/nestjs/nest?branch=master" target="_blank"><img src="https://coveralls.io/repos/github/nestjs/nest/badge.svg?branch=master#9" alt="Coverage" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
-
-## Description
-
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
-
-## Installation
+You can start it with Docker:
 
 ```bash
-$ npm install
+docker compose up --build
 ```
 
-## Running the app
+### 2. Test Endpoints with `curl`
+
+We'll use `curl` to send HTTP requests to your server. Replace `localhost:3000` with your server's address if it's different.
+
+#### Test POST /secret-notes
+
+Create a new secret note.
 
 ```bash
-# development
-$ npm run start
-
-# watch mode
-$ npm run start:dev
-
-# production mode
-$ npm run start:prod
+curl -X POST http://localhost:3000/secret-notes \
+     -H "Content-Type: application/json" \
+     -d '{"note": "This is a test note"}'
 ```
 
-## Test
+You should get a response like this:
+
+```json
+{
+  "id": 1,
+  "note": "encrypted_data_here",
+  "ephemeralPublicKey": "public_key_here",
+  "createdAt": "timestamp_here",
+  "updatedAt": "timestamp_here"
+}
+```
+
+#### Test GET /secret-notes/:id
+
+Retrieve the decrypted note.
 
 ```bash
-# unit tests
-$ npm run test
-
-# e2e tests
-$ npm run test:e2e
-
-# test coverage
-$ npm run test:cov
+curl -X GET http://localhost:3000/secret-notes/1
 ```
 
-## Support
+You should get the decrypted note content:
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+```json
+"This is a test note"
+```
 
-## Stay in touch
+#### Test GET /secret-notes/:id/encrypted
 
-- Author - [Kamil Myśliwiec](https://kamilmysliwiec.com)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+Retrieve the encrypted note.
 
-## License
+```bash
+curl -X GET http://localhost:3000/secret-notes/1/encrypted
+```
 
-Nest is [MIT licensed](LICENSE).
+You should get the encrypted note content:
+
+```json
+{
+  "id": 1,
+  "note": "encrypted_data_here",
+  "ephemeralPublicKey": "public_key_here",
+  "createdAt": "timestamp_here",
+  "updatedAt": "timestamp_here"
+}
+```
+
+#### Test PUT /secret-notes/:id
+
+Update the note.
+
+```bash
+curl -X PUT http://localhost:3000/secret-notes/1 \
+     -H "Content-Type: application/json" \
+     -d '{"note": "This is an updated test note"}'
+```
+
+You should get the updated encrypted note content:
+
+```json
+{
+  "id": 1,
+  "note": "updated_encrypted_data_here",
+  "ephemeralPublicKey": "public_key_here",
+  "createdAt": "timestamp_here",
+  "updatedAt": "timestamp_here"
+}
+```
+
+#### Test DELETE /secret-notes/:id
+
+Delete the note.
+
+```bash
+curl -X DELETE http://localhost:3000/secret-notes/1
+```
+
+You should get an empty response with status 200.
+
+### 3. Verify Environment Variables
+
+Ensure that your `.env` file is correctly loaded and the `ECC_PRIVATE_KEY` and `ECC_PUBLIC_KEY` are correctly set. You can print these variables in your `EccService` to verify they are being loaded or generate runing:
+```bash
+ts-node generate-keys.ts
+```
+
+### 4. Check Logs
+
+Look at the logs generated by your application to ensure there are no errors related to the environment variables or the encryption/decryption process.
+
+### 5. Debugging
+
+If any of the `curl` commands fail, check the error messages and logs to identify the problem. Ensure that the `iv`, `authTag`, and other parameters are correctly generated and parsed during encryption and decryption.
+
+If the problem persists, provide the exact error messages and logs generated by your application, and I'll help you further diagnose and fix the issue.
