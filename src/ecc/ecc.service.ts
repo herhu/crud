@@ -16,28 +16,19 @@ export class EccService {
     this.predefinedPrivateKey = process.env.ECC_PRIVATE_KEY;
   }
 
-  generateKeyPair() {
-    const keyPair = this.ec.genKeyPair();
-    return {
-      privateKey: keyPair.getPrivate('hex'),
-      publicKey: keyPair.getPublic('hex'),
-    };
+  // Function to hash the shared secret
+  private hashSharedSecret(sharedSecret: any): Buffer {
+    return crypto.createHash('sha256').update(sharedSecret.toString(16)).digest();
   }
 
-  private hashSharedSecret(sharedSecret: elliptic.BN): Buffer {
-    return crypto
-      .createHash('sha256')
-      .update(sharedSecret.toString('hex'))
-      .digest();
-  }
-
-  encrypt(data: string): string {
+  // Function to encrypt data
+  public encrypt(data: string): string {
     const keyPair = this.ec.keyFromPublic(this.predefinedPublicKey, 'hex');
     const ephemeralKeyPair = this.ec.genKeyPair();
     const sharedSecret = ephemeralKeyPair.derive(keyPair.getPublic());
     const key = this.hashSharedSecret(sharedSecret);
 
-    const iv = crypto.randomBytes(12); // Generate a random initialization vector
+    const iv = crypto.randomBytes(12);
     const cipher = crypto.createCipheriv('aes-256-gcm', key, iv);
 
     let encrypted = cipher.update(data, 'utf8', 'hex');
@@ -47,19 +38,15 @@ export class EccService {
     return `${ephemeralKeyPair.getPublic('hex')}|${iv.toString('hex')}|${authTag}|${encrypted}`;
   }
 
-  decrypt(encryptedData: string): string {
-    const [ephemeralPublicKey, iv, authTag, encrypted] =
-      encryptedData.split('|');
+  // Function to decrypt data
+  public decrypt(encryptedData: string): string {
+    const [ephemeralPublicKey, iv, authTag, encrypted] = encryptedData.split('|');
     const keyPair = this.ec.keyFromPrivate(this.predefinedPrivateKey, 'hex');
     const ephemeralKeyPair = this.ec.keyFromPublic(ephemeralPublicKey, 'hex');
     const sharedSecret = keyPair.derive(ephemeralKeyPair.getPublic());
     const key = this.hashSharedSecret(sharedSecret);
 
-    const decipher = crypto.createDecipheriv(
-      'aes-256-gcm',
-      key,
-      Buffer.from(iv, 'hex'),
-    );
+    const decipher = crypto.createDecipheriv('aes-256-gcm', key, Buffer.from(iv, 'hex'));
     decipher.setAuthTag(Buffer.from(authTag, 'hex'));
 
     let decrypted = decipher.update(encrypted, 'hex', 'utf8');

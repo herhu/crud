@@ -16,11 +16,16 @@ jobs:
 
     - name: Set up Docker Compose
       run: |
-        sudo curl -L "https://github.com/docker/compose/releases/download/$(curl -s https://api.github.com/repos/docker/compose/releases/latest | jq -r .tag_name)/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
-        sudo chmod +x /usr/local/bin/docker-compose
+        if ! [ -x "$(command -v docker compose)" ]; then
+          sudo curl -L "https://github.com/docker/compose/releases/download/$(curl -s https://api.github.com/repos/docker/compose/releases/latest | jq -r .tag_name)/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+          sudo chmod +x /usr/local/bin/docker-compose
+        fi
 
     - name: Log in to Docker Hub
-      run: echo "${{ secrets.DOCKER_HUB_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_HUB_USERNAME }}" --password-stdin
+      uses: docker/login-action@v2
+      with:
+        username: ${{ secrets.DOCKER_HUB_USERNAME }}
+        password: ${{ secrets.DOCKER_HUB_PASSWORD }}
 
     - name: Set up environment variables
       run: |
@@ -35,28 +40,21 @@ jobs:
     - name: Build and run Docker Compose
       run: docker compose up --build -d
 
-    - name: Install dependencies in container
-      run: docker compose exec app npm install
-
-    - name: Run format
-      run: docker compose exec app npm run format
-
-    - name: Run lint
-      run: docker compose exec app npm run lint
-
-    - name: Run unit tests
-      run: docker compose exec app npm run test
-
-    - name: Run end-to-end tests
-      run: docker compose exec app npm run test:e2e
-
-    - name: Build application
-      run: docker compose exec app npm run build
+    - name: Run tests and build in container
+      run: |
+        docker compose exec app sh -c "
+          npm install &&
+          npm run format &&
+          npm run lint &&
+          npm run test &&
+          npm run test:e2e &&
+          npm run build
+        "
 
     - name: Stop and remove Docker Compose
-      run: docker compose down
+      run: docker compose down --volumes --remove-orphans
 
     - name: Deploy application
       if: github.ref == 'refs/heads/main'
       run: echo "Deploying application..."
-      # Add your deployment script/command here
+      # Add deployment commands here

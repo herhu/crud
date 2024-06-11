@@ -126,7 +126,7 @@ export class SecretNoteService {
   }
   
 
-  async remove(idDto: IdDto): Promise<void> {
+  async remove(idDto: IdDto): Promise<{ message: string }> {
     const { id } = idDto;
     try {
       const note = await this.secretNoteRepository.findOne({ where: { id } });
@@ -134,6 +134,7 @@ export class SecretNoteService {
         throw new SecretNoteNotFoundException(id);
       }
       await this.secretNoteRepository.remove(note);
+      return { message: 'Note successfully removed' };
     } catch (error) {
       if (error instanceof SecretNoteNotFoundException) {
         throw error;
@@ -141,4 +142,5 @@ export class SecretNoteService {
       throw new InternalServerErrorException('Failed to delete note');
     }
   }
+  
 }
