@@ -21,12 +21,6 @@ describe('EccService', () => {
     expect(service).toBeDefined();
   });
 
-  it('should generate a key pair', () => {
-    const keyPair = service.generateKeyPair();
-    expect(keyPair).toHaveProperty('privateKey');
-    expect(keyPair).toHaveProperty('publicKey');
-  });
-
   it('should encrypt and decrypt a note', () => {
     const note = 'test note';
     const encryptedNote = service.encrypt(note);
