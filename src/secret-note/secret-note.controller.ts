@@ -47,7 +47,7 @@ export class SecretNoteController {
   }
 
   @Delete(':id')
-  remove(@Param() params: IdDto): Promise<void> {
+  remove(@Param() params: IdDto): Promise<{message: string}> {
     return this.secretNoteService.remove(params);
   }
 }
