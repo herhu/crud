@@ -7,7 +7,10 @@ import { SecretNote } from './secret-note.entity';
 
 @Module({
   imports: [TypeOrmModule.forFeature([SecretNote])],
-  providers: [SecretNoteService, EccService],
+  providers: [
+    SecretNoteService, 
+    EccService
+  ],
   controllers: [SecretNoteController],
 })
 export class SecretNoteModule {}
