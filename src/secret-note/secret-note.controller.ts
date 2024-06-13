@@ -9,13 +9,18 @@ import {
 } from '@nestjs/common';
 import { SecretNoteService } from './secret-note.service';
 import { SecretNote } from './secret-note.entity';
+import { ApiTags, ApiResponse, ApiBasicAuth } from '@nestjs/swagger';
 import { CreateSecretNoteDto, UpdateSecretNoteDto, IdDto } from './dto';
 
+@ApiTags('secret-notes')
 @Controller('secret-notes')
 export class SecretNoteController {
   constructor(private readonly secretNoteService: SecretNoteService) {}
 
   @Post()
+  @ApiResponse({ status: 201, description: 'The record has been successfully created.'})
+  @ApiResponse({ status: 403, description: 'Forbidden.'})
+  @ApiBasicAuth()
   create(
     @Body() createSecretNoteDto: CreateSecretNoteDto,
   ): Promise<SecretNote> {
